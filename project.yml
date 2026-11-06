@@ -1,0 +1,28 @@
+name: iYoutube
+options:
+  bundleIdPrefix: com.andre
+  deploymentTarget:
+    iOS: "15.0"
+
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    ENABLE_BITCODE: "NO"
+
+targets:
+  iYoutube:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.andre.iYoutube
+        PRODUCT_NAME: iYoutube
+        INFOPLIST_FILE: Sources/Info.plist
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGN_IDENTITY: ""

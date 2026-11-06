@@ -1,0 +1,14 @@
+# IPAs & Binaries
+*.ipa
+*.zip
+Payload/
+*.mobiledevicepairing
+*.plist
+.DS_Store
+
+# Xcode & Swift
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+.swiftpm/
