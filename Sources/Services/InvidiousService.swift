@@ -12,18 +12,37 @@ public final class InvidiousService: ObservableObject {
     private let session: URLSession
 
     public init() {
+        // Reset if saved instance was one of the outdated broken ones
         let saved = UserDefaults.standard.string(forKey: "invidious_instance")
-        self.currentInstance = saved ?? InvidiousInstance.defaultInstances[0].url
+        if let s = saved, !s.contains("tux.pizza") && !s.contains("priv.au") && !s.contains("drgns.space") {
+            self.currentInstance = s
+        } else {
+            self.currentInstance = InvidiousInstance.defaultInstances[0].url
+            UserDefaults.standard.set(self.currentInstance, forKey: "invidious_instance")
+        }
         
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
-        config.timeoutIntervalForResource = 30
+        config.timeoutIntervalForRequest = 10
+        config.timeoutIntervalForResource = 25
         self.session = URLSession(configuration: config)
     }
 
     public func fetchTrending() async throws -> [Video] {
         return try await performWithFailover { baseURL in
-            guard let url = URL(string: "\(baseURL)/api/v1/trending?type=music,gaming,news,movies") ?? URL(string: "\(baseURL)/api/v1/trending") else {
+            // Try popular first (returns 40 curated videos), then fallback to trending
+            if let popularUrl = URL(string: "\(baseURL)/api/v1/popular") {
+                do {
+                    let (data, response) = try await self.session.data(from: popularUrl)
+                    if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                        let decoded = try JSONDecoder().decode([Video].self, from: data)
+                        if !decoded.isEmpty { return decoded }
+                    }
+                } catch {
+                    // Fallback to trending
+                }
+            }
+
+            guard let url = URL(string: "\(baseURL)/api/v1/trending") else {
                 throw URLError(.badURL)
             }
             let (data, response) = try await self.session.data(from: url)
@@ -63,16 +82,15 @@ public final class InvidiousService: ObservableObject {
         }
     }
 
-    // Attempt request on current instance; if it fails, try other available instances
     private func performWithFailover<T>(_ block: @escaping (String) async throws -> T) async throws -> T {
-        // Try current instance first
+        // Try current primary instance
         do {
             return try await block(currentInstance)
         } catch {
             print("Primary instance \(currentInstance) failed: \(error.localizedDescription). Trying fallbacks...")
         }
 
-        // Try fallback instances
+        // Try fallbacks
         for instance in InvidiousInstance.defaultInstances where instance.url != currentInstance {
             do {
                 let result = try await block(instance.url)

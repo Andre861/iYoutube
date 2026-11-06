@@ -36,7 +36,22 @@ public final class PlayerViewModel: ObservableObject {
         do {
             let detail = try await service.fetchVideoDetail(videoId: video.videoId)
             self.videoDetail = detail
-            self.availableFormats = detail.formatStreams ?? []
+
+            var formats = detail.formatStreams ?? []
+            if let hls = detail.hlsUrl, !hls.isEmpty {
+                let hlsFormat = StreamFormat(
+                    url: hls,
+                    quality: "Auto",
+                    qualityLabel: "Auto (HLS)",
+                    resolution: "Auto",
+                    container: "m3u8",
+                    encoding: "h264",
+                    fps: 30,
+                    size: nil
+                )
+                formats.insert(hlsFormat, at: 0)
+            }
+            self.availableFormats = formats
 
             if let playbackURL = detail.bestPlaybackURL {
                 let playerItem = AVPlayerItem(url: playbackURL)
