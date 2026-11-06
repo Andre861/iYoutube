@@ -50,7 +50,7 @@ public struct MainTabView: View {
             }
             .tag(3)
         }
-        .sheet(item: $selectedVideo) { video in
+        .fullScreenCover(item: $selectedVideo) { video in
             VideoPlayerView(video: video, onClose: {
                 selectedVideo = nil
             })

@@ -14,6 +14,10 @@ public struct EmbeddedPlayerView: UIViewRepresentable {
         config.mediaTypesRequiringUserActionForPlayback = []
         config.allowsPictureInPictureMediaPlayback = true
 
+        if #available(iOS 15.4, *) {
+            config.preferences.isElementFullscreenEnabled = true
+        }
+
         // Inject ad-blocker & clean layout styles
         let script = """
         const style = document.createElement('style');
@@ -30,6 +34,7 @@ public struct EmbeddedPlayerView: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.scrollView.isScrollEnabled = false
         webView.backgroundColor = .black
+        webView.scrollView.backgroundColor = .black
         webView.isOpaque = false
 
         loadVideo(in: webView)
@@ -50,9 +55,9 @@ public struct EmbeddedPlayerView: UIViewRepresentable {
             </style>
         </head>
         <body>
-            <iframe src="https://www.youtube-nocookie.com/embed/\(videoId)?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1" 
-                    allow="autoplay; encrypted-media; picture-in-picture" 
-                    allowfullscreen>
+            <iframe src="https://www.youtube-nocookie.com/embed/\(videoId)?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&fs=1" 
+                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen" 
+                    allowfullscreen="true">
             </iframe>
         </body>
         </html>
