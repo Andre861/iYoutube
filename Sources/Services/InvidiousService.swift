@@ -12,19 +12,20 @@ public final class InvidiousService: ObservableObject {
     private let session: URLSession
 
     public init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 10
+        config.timeoutIntervalForResource = 25
+        self.session = URLSession(configuration: config)
+
         // Reset if saved instance was one of the outdated broken ones
         let saved = UserDefaults.standard.string(forKey: "invidious_instance")
         if let s = saved, !s.contains("tux.pizza") && !s.contains("priv.au") && !s.contains("drgns.space") {
             self.currentInstance = s
         } else {
-            self.currentInstance = InvidiousInstance.defaultInstances[0].url
-            UserDefaults.standard.set(self.currentInstance, forKey: "invidious_instance")
+            let def = InvidiousInstance.defaultInstances[0].url
+            self.currentInstance = def
+            UserDefaults.standard.set(def, forKey: "invidious_instance")
         }
-        
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 10
-        config.timeoutIntervalForResource = 25
-        self.session = URLSession(configuration: config)
     }
 
     public func fetchTrending() async throws -> [Video] {
