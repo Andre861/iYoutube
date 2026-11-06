@@ -1,18 +1,6 @@
 import SwiftUI
 import AVKit
 
-// Extension to conditionally apply aspect ratio without destroying view identity
-extension View {
-    @ViewBuilder
-    func applyAspectRatio(_ ratio: CGFloat?, isEnabled: Bool) -> some View {
-        if isEnabled, let ratio = ratio {
-            self.aspectRatio(ratio, contentMode: .fit)
-        } else {
-            self
-        }
-    }
-}
-
 // Native AVPlayerViewController wrapper for full system controls & PiP
 public struct CustomPlayerController: UIViewControllerRepresentable {
     public let player: AVPlayer
@@ -56,38 +44,49 @@ public struct VideoPlayerView: View {
             // Automatically enter fullscreen when rotated to landscape, or when manually triggered
             let isTrueFullscreen = (coordinator.displayState == .fullscreen) || isLandscape
 
+            let screenWidth = geometry.size.width
+            let screenHeight = geometry.size.height
+
+            // In portrait normal mode, player height is 16:9 of screen width
+            // In fullscreen or landscape, player expands to the full screen height
+            let playerHeight: CGFloat = isTrueFullscreen ? screenHeight : (screenWidth * 9.0 / 16.0)
+            let topBarHeight: CGFloat = isTrueFullscreen ? 0 : 50
+
             ZStack(alignment: .top) {
+                // Background
                 Color.black
                     .ignoresSafeArea(.all)
 
+                // Layer 1: Normal Portrait Watch UI (Top bar and Details ScrollView)
+                // Kept in hierarchy with opacity so view identity of player is NEVER disturbed
                 VStack(spacing: 0) {
-                    // Top Navigation Bar (Only in normal portrait watch mode)
-                    if !isTrueFullscreen {
-                        normalTopBar
-                    }
+                    normalTopBar
+                        .frame(height: 50)
 
-                    // Video Player Container (Preserved identity across fullscreen and rotation)
-                    videoContainer(isTrueFullscreen: isTrueFullscreen)
-                        .frame(
-                            maxWidth: .infinity,
-                            maxHeight: isTrueFullscreen ? .infinity : nil
-                        )
-                        .applyAspectRatio(16/9, isEnabled: !isTrueFullscreen)
+                    // Reserved space corresponding to the player's 16:9 portrait position
+                    Color.clear
+                        .frame(width: screenWidth, height: screenWidth * 9.0 / 16.0)
 
-                    // Video Details & Up Next (Only in normal portrait watch mode)
-                    if !isTrueFullscreen {
-                        videoDetailsScrollArea
-                    }
+                    videoDetailsScrollArea
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea(isTrueFullscreen ? .all : [])
+                .opacity(isTrueFullscreen ? 0.0 : 1.0)
+                .allowsHitTesting(!isTrueFullscreen)
 
-                // Floating HUD Overlay (When in true fullscreen or landscape)
+                // Layer 2: Persistent Video Player (NEVER in an if-statement, never unmounted on rotation)
+                videoContainer(isTrueFullscreen: isTrueFullscreen)
+                    .frame(width: screenWidth, height: playerHeight)
+                    .offset(y: isTrueFullscreen ? 0 : topBarHeight)
+                    .ignoresSafeArea(isTrueFullscreen ? .all : [])
+
+                // Layer 3: Floating Fullscreen Overlay HUD
                 if isTrueFullscreen {
                     fullscreenOverlay(isLandscape: isLandscape)
+                        .transition(.opacity)
                 }
             }
             .statusBar(hidden: isTrueFullscreen)
+            .animation(.easeInOut(duration: 0.25), value: isTrueFullscreen)
             .onAppear {
                 if isTrueFullscreen {
                     resetAutoHideTimer()
@@ -212,7 +211,7 @@ public struct VideoPlayerView: View {
 
             // Video Engine
             if viewModel.playbackMode == .web {
-                EmbeddedPlayerView(videoId: video.videoId)
+                EmbeddedPlayerView(videoId: video.videoId, viewModel: viewModel)
             } else if let player = viewModel.player {
                 CustomPlayerController(player: player)
             } else if viewModel.isLoading {
