@@ -35,7 +35,7 @@ public struct VideoPlayerView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Top Navigation / Dismiss Bar
+            // Top Navigation Bar
             HStack {
                 Button(action: {
                     viewModel.stop()
@@ -51,8 +51,23 @@ public struct VideoPlayerView: View {
 
                 Spacer()
 
-                // Quality Selector Menu
-                if !viewModel.availableFormats.isEmpty {
+                // Engine Toggle (Native AVPlayer vs Web Engine)
+                Button(action: {
+                    viewModel.togglePlaybackMode()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: viewModel.playbackMode == .native ? "play.circle.fill" : "globe")
+                        Text(viewModel.playbackMode == .native ? "Native" : "Web Engine")
+                    }
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(8)
+                }
+
+                // Quality Selector Menu (when in native mode)
+                if viewModel.playbackMode == .native && !viewModel.availableFormats.isEmpty {
                     Menu {
                         ForEach(viewModel.availableFormats) { format in
                             Button(format.qualityLabel ?? format.quality ?? "Format") {
@@ -64,8 +79,8 @@ public struct VideoPlayerView: View {
                             Image(systemName: "slider.horizontal.3")
                             Text(viewModel.selectedQuality)
                         }
-                        .font(.subheadline.bold())
-                        .padding(.horizontal, 10)
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8)
                         .padding(.vertical, 6)
                         .background(Color(UIColor.secondarySystemBackground))
                         .cornerRadius(8)
@@ -85,11 +100,13 @@ public struct VideoPlayerView: View {
             .padding(.horizontal)
             .padding(.vertical, 6)
 
-            // Video Player Area
+            // Video Player Screen
             ZStack {
                 Color.black
 
-                if let player = viewModel.player {
+                if viewModel.playbackMode == .web {
+                    EmbeddedPlayerView(videoId: video.videoId)
+                } else if let player = viewModel.player {
                     CustomPlayerController(player: player)
                 } else if viewModel.isLoading {
                     VStack(spacing: 12) {
@@ -108,8 +125,8 @@ public struct VideoPlayerView: View {
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .padding()
-                        Button("Retry") {
-                            Task { await viewModel.loadVideo(video: video) }
+                        Button("Switch to Web Player") {
+                            viewModel.playbackMode = .web
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -135,6 +152,18 @@ public struct VideoPlayerView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
+                    }
+
+                    // Notice if running on Web Engine
+                    if viewModel.playbackMode == .web {
+                        HStack(spacing: 6) {
+                            Image(systemName: "shield.fill")
+                                .foregroundColor(.green)
+                            Text("Playing via Ad-Free Web Engine (Bypasses Google Bot Check)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 2)
                     }
 
                     Divider()
