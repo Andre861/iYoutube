@@ -3,8 +3,11 @@
 *.zip
 Payload/
 *.mobiledevicepairing
-*.plist
 .DS_Store
+
+# Root plist files (like pairing files)
+/*.plist
+
 
 # Xcode & Swift
 build/
