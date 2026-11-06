@@ -83,11 +83,13 @@ public struct MainTabView: View {
                     .zIndex(50)
             }
 
-            // Expanded / Fullscreen Watch Player
+            // Expanded / Fullscreen Watch Player (fills 100% of the screen)
             if (coordinator.displayState == .expanded || coordinator.displayState == .fullscreen),
                let video = coordinator.currentVideo {
                 VideoPlayerView(video: video)
-                    .transition(.move(edge: .bottom))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea(.all)
+                    .transition(.opacity)
                     .zIndex(100)
             }
         }

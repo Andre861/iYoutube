@@ -8,6 +8,17 @@ public struct EmbeddedPlayerView: UIViewRepresentable {
         self.videoId = videoId
     }
 
+    public class Coordinator {
+        var lastVideoId: String
+        init(lastVideoId: String) {
+            self.lastVideoId = lastVideoId
+        }
+    }
+
+    public func makeCoordinator() -> Coordinator {
+        Coordinator(lastVideoId: videoId)
+    }
+
     public func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
@@ -36,12 +47,18 @@ public struct EmbeddedPlayerView: UIViewRepresentable {
         webView.backgroundColor = .black
         webView.scrollView.backgroundColor = .black
         webView.isOpaque = false
+        webView.customUserAgent = "Mozilla/5.0 (iPad; CPU OS 15_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
 
         loadVideo(in: webView)
         return webView
     }
 
-    public func updateUIView(_ uiView: WKWebView, context: Context) {}
+    public func updateUIView(_ uiView: WKWebView, context: Context) {
+        if context.coordinator.lastVideoId != videoId {
+            context.coordinator.lastVideoId = videoId
+            loadVideo(in: uiView)
+        }
+    }
 
     private func loadVideo(in webView: WKWebView) {
         let embedHTML = """
@@ -50,8 +67,22 @@ public struct EmbeddedPlayerView: UIViewRepresentable {
         <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
             <style>
-                body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; }
-                iframe { width: 100%; height: 100%; border: none; }
+                body, html {
+                    margin: 0;
+                    padding: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: #000;
+                    overflow: hidden;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+                iframe {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                }
             </style>
         </head>
         <body>

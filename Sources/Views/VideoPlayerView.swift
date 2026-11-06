@@ -1,6 +1,18 @@
 import SwiftUI
 import AVKit
 
+// Extension to conditionally apply aspect ratio without destroying view identity
+extension View {
+    @ViewBuilder
+    func applyAspectRatio(_ ratio: CGFloat?, isEnabled: Bool) -> some View {
+        if isEnabled, let ratio = ratio {
+            self.aspectRatio(ratio, contentMode: .fit)
+        } else {
+            self
+        }
+    }
+}
+
 // Native AVPlayerViewController wrapper for full system controls & PiP
 public struct CustomPlayerController: UIViewControllerRepresentable {
     public let player: AVPlayer
@@ -11,6 +23,7 @@ public struct CustomPlayerController: UIViewControllerRepresentable {
         controller.allowsPictureInPicturePlayback = true
         controller.updatesNowPlayingInfoCenter = true
         controller.showsPlaybackControls = true
+        controller.videoGravity = .resizeAspect
         return controller
     }
 
@@ -31,52 +44,61 @@ public struct VideoPlayerView: View {
     @State private var showFullDescription: Bool = false
     @State private var showControlsOverlay: Bool = true
     @State private var hideTimer: DispatchWorkItem?
-    
-    // Double-tap Seek Animation States
-    @State private var seekBackwardRipple: Bool = false
-    @State private var seekForwardRipple: Bool = false
 
     public init(video: Video) {
         self.video = video
         self.viewModel = PlayerCoordinator.shared.viewModel
     }
 
-    private var isFullScreen: Bool {
-        coordinator.displayState == .fullscreen
-    }
-
     public var body: some View {
-        ZStack(alignment: .top) {
-            Color(isFullScreen ? UIColor.black : UIColor.systemBackground)
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let isLandscape = geometry.size.width > geometry.size.height
+            // Automatically enter fullscreen when rotated to landscape, or when manually triggered
+            let isTrueFullscreen = (coordinator.displayState == .fullscreen) || isLandscape
 
-            VStack(spacing: 0) {
-                // Top Navigation Bar (Only in normal expanded mode)
-                if !isFullScreen {
-                    normalTopBar
+            ZStack(alignment: .top) {
+                Color.black
+                    .ignoresSafeArea(.all)
+
+                VStack(spacing: 0) {
+                    // Top Navigation Bar (Only in normal portrait watch mode)
+                    if !isTrueFullscreen {
+                        normalTopBar
+                    }
+
+                    // Video Player Container (Preserved identity across fullscreen and rotation)
+                    videoContainer(isTrueFullscreen: isTrueFullscreen)
+                        .frame(
+                            maxWidth: .infinity,
+                            maxHeight: isTrueFullscreen ? .infinity : nil
+                        )
+                        .applyAspectRatio(16/9, isEnabled: !isTrueFullscreen)
+
+                    // Video Details & Up Next (Only in normal portrait watch mode)
+                    if !isTrueFullscreen {
+                        videoDetailsScrollArea
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea(isTrueFullscreen ? .all : [])
 
-                // Video Player Container
-                videoContainer
-                    .frame(
-                        maxWidth: .infinity,
-                        maxHeight: isFullScreen ? .infinity : nil
-                    )
-                    .aspectRatio(isFullScreen ? nil : 16/9, contentMode: .fit)
-
-                // Video Details & Up Next (Only in normal expanded mode)
-                if !isFullScreen {
-                    videoDetailsScrollArea
+                // Floating HUD Overlay (When in true fullscreen or landscape)
+                if isTrueFullscreen {
+                    fullscreenOverlay(isLandscape: isLandscape)
                 }
             }
-            .ignoresSafeArea(isFullScreen ? .all : [])
-
-            // Floating HUD Overlay (Only in fullscreen mode)
-            if isFullScreen {
-                fullscreenOverlay
+            .statusBar(hidden: isTrueFullscreen)
+            .onAppear {
+                if isTrueFullscreen {
+                    resetAutoHideTimer()
+                }
+            }
+            .onChange(of: isLandscape) { newIsLandscape in
+                if newIsLandscape {
+                    resetAutoHideTimer()
+                }
             }
         }
-        .statusBar(hidden: isFullScreen)
     }
 
     // MARK: - Normal Mode Top Bar
@@ -86,12 +108,10 @@ public struct VideoPlayerView: View {
             Button(action: {
                 coordinator.minimize()
             }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 16, weight: .bold))
-                }
-                .foregroundColor(YouTubeTheme.textPrimary)
-                .padding(8)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(YouTubeTheme.textPrimary)
+                    .padding(8)
             }
 
             Spacer()
@@ -185,8 +205,8 @@ public struct VideoPlayerView: View {
         .background(YouTubeTheme.background)
     }
 
-    // MARK: - Video Container with Gestures
-    private var videoContainer: some View {
+    // MARK: - Video Container (Direct Touch Access, Zero Blocking Overlays)
+    private func videoContainer(isTrueFullscreen: Bool) -> some View {
         ZStack(alignment: .bottomTrailing) {
             Color.black
 
@@ -220,67 +240,8 @@ public struct VideoPlayerView: View {
                 }
             }
 
-            // Double-tap Seek Gestures Overlays
-            HStack(spacing: 0) {
-                // Left 40% area: Double-tap back 10s
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        triggerSeekBackward()
-                    }
-
-                // Middle 20% area
-                Color.clear
-                    .contentShape(Rectangle())
-
-                // Right 40% area: Double-tap forward 10s
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        triggerSeekForward()
-                    }
-            }
-
-            // Animated Seek Ripples
-            if seekBackwardRipple {
-                HStack {
-                    VStack(spacing: 6) {
-                        Image(systemName: "gobackward.10")
-                            .font(.system(size: 32, weight: .bold))
-                        Text("10 seconds")
-                            .font(.caption.bold())
-                    }
-                    .foregroundColor(.white)
-                    .padding(20)
-                    .background(Color.black.opacity(0.6))
-                    .clipShape(Circle())
-                    .padding(.leading, 30)
-
-                    Spacer()
-                }
-                .transition(.opacity)
-            }
-
-            if seekForwardRipple {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 6) {
-                        Image(systemName: "goforward.10")
-                            .font(.system(size: 32, weight: .bold))
-                        Text("10 seconds")
-                            .font(.caption.bold())
-                    }
-                    .foregroundColor(.white)
-                    .padding(20)
-                    .background(Color.black.opacity(0.6))
-                    .clipShape(Circle())
-                    .padding(.trailing, 30)
-                }
-                .transition(.opacity)
-            }
-
-            // On-player Fullscreen Toggle (Normal mode)
-            if !isFullScreen {
+            // On-player Fullscreen Toggle (Only in normal portrait mode)
+            if !isTrueFullscreen {
                 Button(action: {
                     coordinator.enterFullscreen()
                 }) {
@@ -297,17 +258,22 @@ public struct VideoPlayerView: View {
     }
 
     // MARK: - Fullscreen Overlay HUD
-    private var fullscreenOverlay: some View {
+    private func fullscreenOverlay(isLandscape: Bool) -> some View {
         VStack {
             if showControlsOverlay {
                 HStack(spacing: 10) {
-                    // Exit Fullscreen
+                    // Exit Fullscreen / Minimize
                     Button(action: {
-                        coordinator.exitFullscreen()
+                        if isLandscape {
+                            // If in landscape, minimize to miniplayer dock so user can browse
+                            coordinator.minimize()
+                        } else {
+                            coordinator.exitFullscreen()
+                        }
                     }) {
                         HStack(spacing: 6) {
-                            Image(systemName: "arrow.down.right.and.arrow.up.left")
-                            Text("Exit Fullscreen")
+                            Image(systemName: isLandscape ? "chevron.down" : "arrow.down.right.and.arrow.up.left")
+                            Text(isLandscape ? "Minimize" : "Exit Fullscreen")
                         }
                         .font(.subheadline.bold())
                         .foregroundColor(.white)
@@ -315,6 +281,33 @@ public struct VideoPlayerView: View {
                         .padding(.vertical, 8)
                         .background(Color.black.opacity(0.75))
                         .cornerRadius(20)
+                    }
+
+                    // Seek Buttons (Native only)
+                    if viewModel.playbackMode == .native {
+                        Button(action: {
+                            viewModel.seek(by: -10)
+                            resetAutoHideTimer()
+                        }) {
+                            Image(systemName: "gobackward.10")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(8)
+                                .background(Color.black.opacity(0.75))
+                                .clipShape(Circle())
+                        }
+
+                        Button(action: {
+                            viewModel.seek(by: 10)
+                            resetAutoHideTimer()
+                        }) {
+                            Image(systemName: "goforward.10")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(8)
+                                .background(Color.black.opacity(0.75))
+                                .clipShape(Circle())
+                        }
                     }
 
                     Spacer()
@@ -408,12 +401,16 @@ public struct VideoPlayerView: View {
                 .padding(.top, 16)
                 .transition(.opacity)
             } else {
-                // Minimized subtle corner controls
+                // Minimized subtle corner controls (does not obstruct video)
                 HStack(spacing: 8) {
                     Button(action: {
-                        coordinator.exitFullscreen()
+                        if isLandscape {
+                            coordinator.minimize()
+                        } else {
+                            coordinator.exitFullscreen()
+                        }
                     }) {
-                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        Image(systemName: isLandscape ? "chevron.down" : "arrow.down.right.and.arrow.up.left")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
                             .padding(10)
@@ -527,31 +524,6 @@ public struct VideoPlayerView: View {
             .padding(.bottom, 80)
         }
         .background(YouTubeTheme.background)
-    }
-
-    // MARK: - Gesture Helpers
-    private func triggerSeekBackward() {
-        viewModel.seek(by: -10)
-        withAnimation {
-            seekBackwardRipple = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
-            withAnimation {
-                seekBackwardRipple = false
-            }
-        }
-    }
-
-    private func triggerSeekForward() {
-        viewModel.seek(by: 10)
-        withAnimation {
-            seekForwardRipple = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
-            withAnimation {
-                seekForwardRipple = false
-            }
-        }
     }
 
     private func resetAutoHideTimer() {
