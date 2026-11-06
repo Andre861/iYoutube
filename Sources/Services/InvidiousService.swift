@@ -28,22 +28,27 @@ public final class InvidiousService: ObservableObject {
         }
     }
 
-    public func fetchTrending() async throws -> [Video] {
+    public func fetchTrending(type: String? = nil) async throws -> [Video] {
         return try await performWithFailover { baseURL in
-            // Try popular first (returns 40 curated videos), then fallback to trending
-            if let popularUrl = URL(string: "\(baseURL)/api/v1/popular") {
-                do {
-                    let (data, response) = try await self.session.data(from: popularUrl)
-                    if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
-                        let decoded = try JSONDecoder().decode([Video].self, from: data)
-                        if !decoded.isEmpty { return decoded }
+            var path = "\(baseURL)/api/v1/trending"
+            if let type = type, !type.isEmpty {
+                path += "?type=\(type)"
+            } else {
+                // Try popular first (returns 40 curated videos), then fallback to trending
+                if let popularUrl = URL(string: "\(baseURL)/api/v1/popular") {
+                    do {
+                        let (data, response) = try await self.session.data(from: popularUrl)
+                        if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                            let decoded = try JSONDecoder().decode([Video].self, from: data)
+                            if !decoded.isEmpty { return decoded }
+                        }
+                    } catch {
+                        // Fallback to trending
                     }
-                } catch {
-                    // Fallback to trending
                 }
             }
 
-            guard let url = URL(string: "\(baseURL)/api/v1/trending") else {
+            guard let url = URL(string: path) else {
                 throw URLError(.badURL)
             }
             let (data, response) = try await self.session.data(from: url)

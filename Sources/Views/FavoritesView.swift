@@ -7,7 +7,7 @@ public struct FavoritesView: View {
     @State private var selectedTab = 0
 
     private let columns = [
-        GridItem(.adaptive(minimum: 280, maximum: 450), spacing: 18)
+        GridItem(.adaptive(minimum: 320, maximum: 550), spacing: 20)
     ]
 
     public init(onSelectVideo: @escaping (Video) -> Void) {
@@ -16,56 +16,69 @@ public struct FavoritesView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            Picker("Library", selection: $selectedTab) {
-                Text("Bookmarks (\(favorites.favorites.count))").tag(0)
-                Text("History (\(favorites.history.count))").tag(1)
+            // Header
+            HStack {
+                Text("Library")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(YouTubeTheme.textPrimary)
+                Spacer()
             }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
+            .background(YouTubeTheme.background)
+
+            // Custom Segmented Filter
+            HStack(spacing: 8) {
+                segmentButton(title: "Bookmarks (\(favorites.favorites.count))", tag: 0)
+                segmentButton(title: "History (\(favorites.history.count))", tag: 1)
+                segmentButton(title: "Subscriptions (\(favorites.subscriptions.count))", tag: 2)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(YouTubeTheme.background)
+
+            Divider()
+                .background(YouTubeTheme.border)
 
             ScrollView {
                 if selectedTab == 0 {
+                    // Bookmarks
                     if favorites.favorites.isEmpty {
-                        VStack(spacing: 12) {
-                            Image(systemName: "bookmark")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary)
-                            Text("No Bookmarked Videos")
-                                .font(.headline)
-                            Text("Tap the bookmark icon on any video to save it here.")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.top, 80)
+                        emptyStateView(
+                            icon: "bookmark",
+                            title: "No Bookmarked Videos",
+                            message: "Tap the bookmark icon on any video to save it here for later."
+                        )
                     } else {
                         LazyVGrid(columns: columns, spacing: 24) {
                             ForEach(favorites.favorites) { video in
                                 VideoCardView(video: video, onSelect: onSelectVideo)
                             }
                         }
-                        .padding()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 80)
                     }
-                } else {
+                } else if selectedTab == 1 {
+                    // History
                     if favorites.history.isEmpty {
-                        VStack(spacing: 12) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary)
-                            Text("Watch History is Empty")
-                                .font(.headline)
-                            Text("Videos you watch will appear here.")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.top, 80)
+                        emptyStateView(
+                            icon: "clock",
+                            title: "Watch History is Empty",
+                            message: "Videos you watch will appear here automatically."
+                        )
                     } else {
                         HStack {
                             Spacer()
                             Button("Clear History") {
                                 favorites.clearHistory()
                             }
-                            .foregroundColor(.red)
-                            .padding(.trailing)
+                            .font(.subheadline.bold())
+                            .foregroundColor(YouTubeTheme.red)
+                            .padding(.trailing, 16)
+                            .padding(.top, 8)
                         }
 
                         LazyVGrid(columns: columns, spacing: 24) {
@@ -73,11 +86,106 @@ public struct FavoritesView: View {
                                 VideoCardView(video: video, onSelect: onSelectVideo)
                             }
                         }
-                        .padding()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 80)
+                    }
+                } else {
+                    // Subscriptions
+                    if favorites.subscriptions.isEmpty {
+                        emptyStateView(
+                            icon: "play.rectangle.on.rectangle",
+                            title: "No Subscriptions Yet",
+                            message: "Subscribe to channels from any video watch page to see them here."
+                        )
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(favorites.subscriptions) { sub in
+                                HStack(spacing: 14) {
+                                    Circle()
+                                        .fill(YouTubeTheme.red)
+                                        .frame(width: 44, height: 44)
+                                        .overlay(
+                                            Text(sub.author.prefix(1).uppercased())
+                                                .font(.headline.bold())
+                                                .foregroundColor(.white)
+                                        )
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(sub.author)
+                                            .font(.headline)
+                                            .foregroundColor(YouTubeTheme.textPrimary)
+                                        if let count = sub.subCountText {
+                                            Text(count)
+                                                .font(.caption)
+                                                .foregroundColor(YouTubeTheme.textSecondary)
+                                        }
+                                    }
+
+                                    Spacer()
+
+                                    Button(action: {
+                                        favorites.toggleSubscription(author: sub.author, authorId: sub.authorId)
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "bell.fill")
+                                            Text("Subscribed")
+                                        }
+                                        .font(.caption.bold())
+                                        .foregroundColor(YouTubeTheme.textPrimary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(YouTubeTheme.surface)
+                                        .cornerRadius(16)
+                                    }
+                                }
+                                .padding()
+                                .background(YouTubeTheme.card)
+                                .cornerRadius(12)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 80)
                     }
                 }
             }
+            .background(YouTubeTheme.background)
         }
-        .navigationTitle("Library")
+        .background(YouTubeTheme.background)
+        .navigationBarHidden(true)
+    }
+
+    private func segmentButton(title: String, tag: Int) -> some View {
+        let isSelected = selectedTab == tag
+        return Button(action: {
+            selectedTab = tag
+        }) {
+            Text(title)
+                .font(.subheadline.weight(isSelected ? .bold : .medium))
+                .foregroundColor(isSelected ? .black : YouTubeTheme.textPrimary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(isSelected ? YouTubeTheme.pillSelected : YouTubeTheme.pill)
+                .cornerRadius(16)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private func emptyStateView(icon: String, title: String, message: String) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 48))
+                .foregroundColor(YouTubeTheme.textSecondary)
+            Text(title)
+                .font(.headline)
+                .foregroundColor(YouTubeTheme.textPrimary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(YouTubeTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .padding(.top, 80)
     }
 }

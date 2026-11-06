@@ -11,9 +11,21 @@ public struct VideoDetail: Codable {
     public let lengthSeconds: Int?
     public let viewCount: Int?
     public let likeCount: Int?
+    public let recommendedVideos: [Video]?
     public let formatStreams: [StreamFormat]?
     public let adaptiveFormats: [StreamFormat]?
     public let hlsUrl: String?
+
+    public var formattedLikes: String {
+        guard let count = likeCount else { return "Like" }
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000.0)
+        } else if count >= 1_000 {
+            return String(format: "%.1fK", Double(count) / 1_000.0)
+        } else {
+            return "\(count)"
+        }
+    }
 
     public var bestPlaybackURL: URL? {
         // 1. Prefer direct muxed 720p or 480p or 360p MP4 format stream

@@ -7,94 +7,112 @@ public struct SettingsView: View {
     public init() {}
 
     public var body: some View {
-        Form {
-            Section(header: Text("Invidious Instance")) {
-                Picker("Active Server", selection: $service.currentInstance) {
-                    ForEach(InvidiousInstance.defaultInstances) { inst in
-                        Text(inst.name).tag(inst.url)
-                    }
-                }
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Settings")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(YouTubeTheme.textPrimary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
+            .background(YouTubeTheme.background)
 
-                HStack {
-                    Text("Custom Server")
-                    TextField("https://...", text: $customURL)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                    Button("Use") {
-                        if customURL.hasPrefix("http") {
-                            service.currentInstance = customURL
+            Divider()
+                .background(YouTubeTheme.border)
+
+            Form {
+                Section(header: Text("Invidious Server").foregroundColor(YouTubeTheme.textSecondary)) {
+                    Picker("Active Node", selection: $service.currentInstance) {
+                        ForEach(InvidiousInstance.defaultInstances) { inst in
+                            Text(inst.name).tag(inst.url)
                         }
                     }
-                    .disabled(!customURL.hasPrefix("http"))
-                }
 
-                Text("Current: \(service.currentInstance)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Section(header: Text("Features")) {
-                HStack {
-                    Image(systemName: "speaker.wave.3.fill")
-                        .foregroundColor(.blue)
-                    VStack(alignment: .leading) {
-                        Text("Background Audio")
-                            .font(.headline)
-                        Text("Audio continues playing when the iPad screen is turned off or when switching apps.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    HStack {
+                        Text("Custom Node")
+                        TextField("https://...", text: $customURL)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                        Button("Apply") {
+                            if customURL.hasPrefix("http") {
+                                service.currentInstance = customURL
+                            }
+                        }
+                        .disabled(!customURL.hasPrefix("http"))
                     }
-                }
-                .padding(.vertical, 4)
 
-                HStack {
-                    Image(systemName: "pip.fill")
-                        .foregroundColor(.green)
-                    VStack(alignment: .leading) {
-                        Text("Picture in Picture")
-                            .font(.headline)
-                        Text("Swipe up or press Home while a video is playing to watch in a floating window.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    Text("Active: \(service.currentInstance)")
+                        .font(.caption)
+                        .foregroundColor(YouTubeTheme.textSecondary)
+                }
+
+                Section(header: Text("Playback & Hardware").foregroundColor(YouTubeTheme.textSecondary)) {
+                    HStack {
+                        Image(systemName: "cpu")
+                            .foregroundColor(YouTubeTheme.red)
+                        VStack(alignment: .leading) {
+                            Text("iPad Air 2 Hardware Optimization")
+                                .font(.headline)
+                            Text("A8X memory-capped image cache (60MB) prevents jetsam crashes on 2GB RAM.")
+                                .font(.caption)
+                                .foregroundColor(YouTubeTheme.textSecondary)
+                        }
                     }
-                }
-                .padding(.vertical, 4)
+                    .padding(.vertical, 4)
 
-                HStack {
-                    Image(systemName: "hand.raised.fill")
-                        .foregroundColor(.red)
-                    VStack(alignment: .leading) {
-                        Text("Zero Ads & No Tracking")
-                            .font(.headline)
-                        Text("Video streams are retrieved directly from privacy-friendly Invidious proxy nodes.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    HStack {
+                        Image(systemName: "speaker.wave.3.fill")
+                            .foregroundColor(.blue)
+                        VStack(alignment: .leading) {
+                            Text("Background Audio & Screen Off")
+                                .font(.headline)
+                            Text("Audio continues uninterrupted when switching apps or locking the iPad.")
+                                .font(.caption)
+                                .foregroundColor(YouTubeTheme.textSecondary)
+                        }
                     }
-                }
-                .padding(.vertical, 4)
-            }
+                    .padding(.vertical, 4)
 
-            Section(header: Text("About")) {
-                HStack {
-                    Text("App Name")
-                    Spacer()
-                    Text("iYoutube")
-                        .foregroundColor(.secondary)
+                    HStack {
+                        Image(systemName: "pip.fill")
+                            .foregroundColor(.green)
+                        VStack(alignment: .leading) {
+                            Text("Picture in Picture (PiP)")
+                                .font(.headline)
+                            Text("System PiP allows watching videos while using other iPad apps.")
+                                .font(.caption)
+                                .foregroundColor(YouTubeTheme.textSecondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
                 }
-                HStack {
-                    Text("Target Device")
-                    Spacer()
-                    Text("iPad Air 2 (iOS 15.0+)")
-                        .foregroundColor(.secondary)
-                }
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text("1.0.0")
-                        .foregroundColor(.secondary)
+
+                Section(header: Text("About").foregroundColor(YouTubeTheme.textSecondary)) {
+                    HStack {
+                        Text("App Name")
+                        Spacer()
+                        Text("iYoutube Pro")
+                            .foregroundColor(YouTubeTheme.textSecondary)
+                    }
+                    HStack {
+                        Text("Target Hardware")
+                        Spacer()
+                        Text("iPad Air 2 (iOS 15.0+)")
+                            .foregroundColor(YouTubeTheme.textSecondary)
+                    }
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text("1.1.0 (YouTube Parity)")
+                            .foregroundColor(YouTubeTheme.textSecondary)
+                    }
                 }
             }
         }
-        .navigationTitle("Settings")
+        .background(YouTubeTheme.background)
+        .navigationBarHidden(true)
     }
 }
