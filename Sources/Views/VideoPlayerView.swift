@@ -41,29 +41,32 @@ public struct VideoPlayerView: View {
     public var body: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
-            // Automatically enter fullscreen when rotated to landscape, or when manually triggered
             let isTrueFullscreen = (coordinator.displayState == .fullscreen) || isLandscape
 
             let screenWidth = geometry.size.width
             let screenHeight = geometry.size.height
-
-            // In portrait normal mode, player height is 16:9 of screen width
-            // In fullscreen or landscape, player expands to the full screen height
+            // Respect status bar in portrait mode so top edge starts cleanly beneath the clock/battery
+            let safeAreaTop: CGFloat = isTrueFullscreen ? 0.0 : max(geometry.safeAreaInsets.top, 20.0)
+            let topBarHeight: CGFloat = 48.0
             let playerHeight: CGFloat = isTrueFullscreen ? screenHeight : (screenWidth * 9.0 / 16.0)
-            let topBarHeight: CGFloat = isTrueFullscreen ? 0 : 50
+            let playerOffsetY: CGFloat = isTrueFullscreen ? 0.0 : (safeAreaTop + topBarHeight)
 
             ZStack(alignment: .top) {
                 // Background
-                Color.black
+                (isTrueFullscreen ? Color.black : YouTubeTheme.background)
                     .ignoresSafeArea(.all)
 
                 // Layer 1: Normal Portrait Watch UI (Top bar and Details ScrollView)
-                // Kept in hierarchy with opacity so view identity of player is NEVER disturbed
+                // Kept permanently in hierarchy with opacity to maintain view identity
                 VStack(spacing: 0) {
-                    normalTopBar
-                        .frame(height: 50)
+                    // Spacer for status bar clearance in portrait
+                    Color.clear
+                        .frame(height: safeAreaTop)
 
-                    // Reserved space corresponding to the player's 16:9 portrait position
+                    normalTopBar
+                        .frame(height: topBarHeight)
+
+                    // Spacer reserving room for the video player in portrait
                     Color.clear
                         .frame(width: screenWidth, height: screenWidth * 9.0 / 16.0)
 
@@ -73,15 +76,15 @@ public struct VideoPlayerView: View {
                 .opacity(isTrueFullscreen ? 0.0 : 1.0)
                 .allowsHitTesting(!isTrueFullscreen)
 
-                // Layer 2: Persistent Video Player (NEVER in an if-statement, never unmounted on rotation)
+                // Layer 2: Persistent Video Player (Permanent position, frame resizes smoothly)
                 videoContainer(isTrueFullscreen: isTrueFullscreen)
                     .frame(width: screenWidth, height: playerHeight)
-                    .offset(y: isTrueFullscreen ? 0 : topBarHeight)
+                    .offset(y: playerOffsetY)
                     .ignoresSafeArea(isTrueFullscreen ? .all : [])
 
-                // Layer 3: Floating Fullscreen Overlay HUD
+                // Layer 3: Floating Fullscreen Overlay HUD (Landscape or manual fullscreen)
                 if isTrueFullscreen {
-                    fullscreenOverlay(isLandscape: isLandscape)
+                    fullscreenOverlay(isLandscape: isLandscape, safeAreaTop: safeAreaTop)
                         .transition(.opacity)
                 }
             }
@@ -100,38 +103,41 @@ public struct VideoPlayerView: View {
         }
     }
 
-    // MARK: - Normal Mode Top Bar
+    // MARK: - Normal Mode Top Bar (Clean, Unified Height 32pt, Vertically Centered)
     private var normalTopBar: some View {
-        HStack(spacing: 12) {
-            // Minimize Button (Swipe/Tap down to miniplayer dock)
+        HStack(alignment: .center, spacing: 8) {
+            // Minimize Button (32x32 circular pill)
             Button(action: {
                 coordinator.minimize()
             }) {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(YouTubeTheme.textPrimary)
-                    .padding(8)
+                    .frame(width: 32, height: 32)
+                    .background(YouTubeTheme.pill)
+                    .clipShape(Circle())
             }
 
             Spacer()
 
-            // True Fullscreen Button
+            // True Fullscreen Button (32pt uniform height)
             Button(action: {
                 coordinator.enterFullscreen()
             }) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    Text("Fullscreen")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("Full")
+                        .font(.system(size: 12, weight: .semibold))
                 }
-                .font(.caption.bold())
                 .foregroundColor(YouTubeTheme.textPrimary)
                 .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .frame(height: 32)
                 .background(YouTubeTheme.pill)
-                .cornerRadius(8)
+                .cornerRadius(16)
             }
 
-            // Playback Speed Menu
+            // Playback Speed Menu (32pt uniform height)
             Menu {
                 ForEach([0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { rate in
                     Button("\(String(format: "%.2fx", rate))") {
@@ -141,33 +147,35 @@ public struct VideoPlayerView: View {
             } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "gauge")
+                        .font(.system(size: 11, weight: .bold))
                     Text("\(String(format: "%.1fx", viewModel.playbackRate))")
+                        .font(.system(size: 12, weight: .semibold))
                 }
-                .font(.caption.bold())
                 .foregroundColor(YouTubeTheme.textPrimary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .frame(height: 32)
                 .background(YouTubeTheme.pill)
-                .cornerRadius(8)
+                .cornerRadius(16)
             }
 
-            // Engine Toggle
+            // Engine Toggle (32pt uniform height)
             Button(action: {
                 viewModel.togglePlaybackMode()
             }) {
                 HStack(spacing: 4) {
                     Image(systemName: viewModel.playbackMode == .native ? "play.circle.fill" : "globe")
+                        .font(.system(size: 11, weight: .bold))
                     Text(viewModel.playbackMode == .native ? "Native" : "Web")
+                        .font(.system(size: 12, weight: .semibold))
                 }
-                .font(.caption.bold())
                 .foregroundColor(YouTubeTheme.textPrimary)
                 .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .frame(height: 32)
                 .background(YouTubeTheme.pill)
-                .cornerRadius(8)
+                .cornerRadius(16)
             }
 
-            // Quality Menu (Native only)
+            // Quality Menu (Native only, 32pt uniform height)
             if viewModel.playbackMode == .native && !viewModel.availableFormats.isEmpty {
                 Menu {
                     ForEach(viewModel.availableFormats) { format in
@@ -178,33 +186,36 @@ public struct VideoPlayerView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 11, weight: .bold))
                         Text(viewModel.selectedQuality)
+                            .font(.system(size: 12, weight: .semibold))
                     }
-                    .font(.caption.bold())
                     .foregroundColor(YouTubeTheme.textPrimary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .frame(height: 32)
                     .background(YouTubeTheme.pill)
-                    .cornerRadius(8)
+                    .cornerRadius(16)
                 }
             }
 
-            // Dismiss Entire Player
+            // Close Button (32x32 circular pill)
             Button(action: {
                 coordinator.close()
             }) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(YouTubeTheme.textSecondary)
-                    .padding(8)
+                    .frame(width: 32, height: 32)
+                    .background(YouTubeTheme.pill)
+                    .clipShape(Circle())
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .frame(height: 48)
         .background(YouTubeTheme.background)
     }
 
-    // MARK: - Video Container (Direct Touch Access, Zero Blocking Overlays)
+    // MARK: - Video Container
     private func videoContainer(isTrueFullscreen: Bool) -> some View {
         ZStack(alignment: .bottomTrailing) {
             Color.black
@@ -220,6 +231,7 @@ public struct VideoPlayerView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: YouTubeTheme.red))
                         .scaleEffect(1.5)
                     Text("Loading Stream...")
+                        .font(.subheadline)
                         .foregroundColor(.white)
                 }
             } else if let error = viewModel.errorMessage {
@@ -228,9 +240,10 @@ public struct VideoPlayerView: View {
                         .font(.system(size: 40))
                         .foregroundColor(YouTubeTheme.red)
                     Text(error)
+                        .font(.footnote)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
-                        .padding()
+                        .padding(.horizontal)
                     Button("Switch to Web Player") {
                         viewModel.playbackMode = .web
                     }
@@ -245,9 +258,9 @@ public struct VideoPlayerView: View {
                     coordinator.enterFullscreen()
                 }) {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(8)
+                        .padding(7)
                         .background(Color.black.opacity(0.7))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
@@ -256,30 +269,30 @@ public struct VideoPlayerView: View {
         }
     }
 
-    // MARK: - Fullscreen Overlay HUD
-    private func fullscreenOverlay(isLandscape: Bool) -> some View {
+    // MARK: - Fullscreen Overlay HUD (Standardized 32pt height pills)
+    private func fullscreenOverlay(isLandscape: Bool, safeAreaTop: CGFloat) -> some View {
         VStack {
             if showControlsOverlay {
-                HStack(spacing: 10) {
+                HStack(alignment: .center, spacing: 8) {
                     // Exit Fullscreen / Minimize
                     Button(action: {
                         if isLandscape {
-                            // If in landscape, minimize to miniplayer dock so user can browse
                             coordinator.minimize()
                         } else {
                             coordinator.exitFullscreen()
                         }
                     }) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 5) {
                             Image(systemName: isLandscape ? "chevron.down" : "arrow.down.right.and.arrow.up.left")
-                            Text(isLandscape ? "Minimize" : "Exit Fullscreen")
+                                .font(.system(size: 11, weight: .bold))
+                            Text(isLandscape ? "Minimize" : "Exit Full")
+                                .font(.system(size: 12, weight: .semibold))
                         }
-                        .font(.subheadline.bold())
                         .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
                         .background(Color.black.opacity(0.75))
-                        .cornerRadius(20)
+                        .cornerRadius(16)
                     }
 
                     // Seek Buttons (Native only)
@@ -289,9 +302,9 @@ public struct VideoPlayerView: View {
                             resetAutoHideTimer()
                         }) {
                             Image(systemName: "gobackward.10")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(.white)
-                                .padding(8)
+                                .frame(width: 32, height: 32)
                                 .background(Color.black.opacity(0.75))
                                 .clipShape(Circle())
                         }
@@ -301,9 +314,9 @@ public struct VideoPlayerView: View {
                             resetAutoHideTimer()
                         }) {
                             Image(systemName: "goforward.10")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(.white)
-                                .padding(8)
+                                .frame(width: 32, height: 32)
                                 .background(Color.black.opacity(0.75))
                                 .clipShape(Circle())
                         }
@@ -319,33 +332,35 @@ public struct VideoPlayerView: View {
                             }
                         }
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 3) {
                             Image(systemName: "gauge")
+                                .font(.system(size: 11, weight: .bold))
                             Text("\(String(format: "%.1fx", viewModel.playbackRate))")
+                                .font(.system(size: 12, weight: .semibold))
                         }
-                        .font(.caption.bold())
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
+                        .frame(height: 32)
                         .background(Color.black.opacity(0.75))
-                        .cornerRadius(20)
+                        .cornerRadius(16)
                     }
 
-                    // Engine Toggle in Fullscreen
+                    // Engine Toggle
                     Button(action: {
                         viewModel.togglePlaybackMode()
                         resetAutoHideTimer()
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: viewModel.playbackMode == .native ? "play.circle.fill" : "globe")
+                                .font(.system(size: 11, weight: .bold))
                             Text(viewModel.playbackMode == .native ? "Native" : "Web")
+                                .font(.system(size: 12, weight: .semibold))
                         }
-                        .font(.caption.bold())
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .frame(height: 32)
                         .background(Color.black.opacity(0.75))
-                        .cornerRadius(20)
+                        .cornerRadius(16)
                     }
 
                     // Quality Menu (Native only)
@@ -359,14 +374,15 @@ public struct VideoPlayerView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 11, weight: .bold))
                                 Text(viewModel.selectedQuality)
+                                    .font(.system(size: 12, weight: .semibold))
                             }
-                            .font(.caption.bold())
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
+                            .frame(height: 32)
                             .background(Color.black.opacity(0.75))
-                            .cornerRadius(20)
+                            .cornerRadius(16)
                         }
                     }
 
@@ -377,9 +393,9 @@ public struct VideoPlayerView: View {
                         }
                     }) {
                         Image(systemName: "eye.slash")
-                            .font(.subheadline.bold())
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(8)
+                            .frame(width: 32, height: 32)
                             .background(Color.black.opacity(0.75))
                             .clipShape(Circle())
                     }
@@ -389,9 +405,9 @@ public struct VideoPlayerView: View {
                         coordinator.close()
                     }) {
                         Image(systemName: "xmark")
-                            .font(.headline.bold())
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(8)
+                            .frame(width: 32, height: 32)
                             .background(Color.black.opacity(0.75))
                             .clipShape(Circle())
                     }
@@ -410,9 +426,9 @@ public struct VideoPlayerView: View {
                         }
                     }) {
                         Image(systemName: isLandscape ? "chevron.down" : "arrow.down.right.and.arrow.up.left")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(10)
+                            .frame(width: 32, height: 32)
                             .background(Color.black.opacity(0.55))
                             .clipShape(Circle())
                     }
@@ -424,9 +440,9 @@ public struct VideoPlayerView: View {
                         }
                     }) {
                         Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(10)
+                            .frame(width: 32, height: 32)
                             .background(Color.black.opacity(0.55))
                             .clipShape(Circle())
                     }

@@ -1,16 +1,81 @@
 import SwiftUI
+import UIKit
 
 public struct YouTubeTheme {
-    // Authentic YouTube Dark Mode Colors
-    public static let background = Color(hex: "0F0F0F")
-    public static let surface = Color(hex: "212121")
-    public static let card = Color(hex: "1F1F1F")
-    public static let pill = Color(hex: "272727")
-    public static let pillSelected = Color.white
-    public static let textPrimary = Color.white
-    public static let textSecondary = Color(hex: "AAAAAA")
+    // Dynamic background matching YouTube's authentic light (#FFFFFF) & dark (#0F0F0F)
+    public static var background: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+                : UIColor.white
+        })
+    }
+
+    public static var surface: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 33/255, green: 33/255, blue: 33/255, alpha: 1.0)
+                : UIColor(red: 242/255, green: 242/255, blue: 242/255, alpha: 1.0)
+        })
+    }
+
+    public static var card: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 31/255, green: 31/255, blue: 31/255, alpha: 1.0)
+                : UIColor(red: 248/255, green: 248/255, blue: 248/255, alpha: 1.0)
+        })
+    }
+
+    public static var pill: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 39/255, green: 39/255, blue: 39/255, alpha: 1.0)
+                : UIColor(red: 232/255, green: 232/255, blue: 232/255, alpha: 1.0)
+        })
+    }
+
+    public static var pillSelected: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor.white
+                : UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+        })
+    }
+
+    public static var textOnPillSelected: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+                : UIColor.white
+        })
+    }
+
+    public static var textPrimary: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor.white
+                : UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+        })
+    }
+
+    public static var textSecondary: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 170/255, green: 170/255, blue: 170/255, alpha: 1.0)
+                : UIColor(red: 96/255, green: 96/255, blue: 96/255, alpha: 1.0)
+        })
+    }
+
     public static let red = Color(hex: "FF0000")
-    public static let border = Color(hex: "333333")
+
+    public static var border: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 51/255, green: 51/255, blue: 51/255, alpha: 1.0)
+                : UIColor(red: 224/255, green: 224/255, blue: 224/255, alpha: 1.0)
+        })
+    }
 }
 
 extension Color {

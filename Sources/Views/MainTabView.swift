@@ -2,19 +2,44 @@ import SwiftUI
 
 public struct MainTabView: View {
     @ObservedObject private var coordinator = PlayerCoordinator.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var selectedTab = 0
 
     public init() {
-        // Authentic YouTube Dark TabBar
+        configureTabBarAppearance()
+    }
+
+    private func configureTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+        appearance.backgroundColor = UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+                : UIColor(red: 249/255, green: 249/255, blue: 249/255, alpha: 1.0)
+        }
 
         let itemAppearance = UITabBarItemAppearance()
-        itemAppearance.normal.iconColor = UIColor(red: 170/255, green: 170/255, blue: 170/255, alpha: 1.0)
-        itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(red: 170/255, green: 170/255, blue: 170/255, alpha: 1.0)]
-        itemAppearance.selected.iconColor = UIColor.white
-        itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.white]
+        itemAppearance.normal.iconColor = UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 170/255, green: 170/255, blue: 170/255, alpha: 1.0)
+                : UIColor(red: 100/255, green: 100/255, blue: 100/255, alpha: 1.0)
+        }
+        itemAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor { trait in
+                trait.userInterfaceStyle == .dark
+                    ? UIColor(red: 170/255, green: 170/255, blue: 170/255, alpha: 1.0)
+                    : UIColor(red: 100/255, green: 100/255, blue: 100/255, alpha: 1.0)
+            }
+        ]
+
+        itemAppearance.selected.iconColor = UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor.white : UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+        }
+        itemAppearance.selected.titleTextAttributes = [
+            .foregroundColor: UIColor { trait in
+                trait.userInterfaceStyle == .dark ? UIColor.white : UIColor(red: 15/255, green: 15/255, blue: 15/255, alpha: 1.0)
+            }
+        ]
 
         appearance.stackedLayoutAppearance = itemAppearance
         appearance.inlineLayoutAppearance = itemAppearance
@@ -30,49 +55,37 @@ public struct MainTabView: View {
         ZStack(alignment: .bottom) {
             // Main Tab Bar Navigation
             TabView(selection: $selectedTab) {
-                NavigationView {
-                    HomeFeedView(onSelectVideo: { video in
-                        coordinator.play(video: video)
-                    })
-                }
-                .navigationViewStyle(StackNavigationViewStyle())
+                HomeFeedView(onSelectVideo: { video in
+                    coordinator.play(video: video)
+                })
                 .tabItem {
                     Label("Home", systemImage: "house.fill")
                 }
                 .tag(0)
 
-                NavigationView {
-                    SearchView(onSelectVideo: { video in
-                        coordinator.play(video: video)
-                    })
-                }
-                .navigationViewStyle(StackNavigationViewStyle())
+                SearchView(onSelectVideo: { video in
+                    coordinator.play(video: video)
+                })
                 .tabItem {
                     Label("Search", systemImage: "magnifyingglass")
                 }
                 .tag(1)
 
-                NavigationView {
-                    FavoritesView(onSelectVideo: { video in
-                        coordinator.play(video: video)
-                    })
-                }
-                .navigationViewStyle(StackNavigationViewStyle())
+                FavoritesView(onSelectVideo: { video in
+                    coordinator.play(video: video)
+                })
                 .tabItem {
                     Label("Library", systemImage: "play.square.stack.fill")
                 }
                 .tag(2)
 
-                NavigationView {
-                    SettingsView()
-                }
-                .navigationViewStyle(StackNavigationViewStyle())
+                SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")
                 }
                 .tag(3)
             }
-            .accentColor(.white)
+            .accentColor(themeManager.selectedTheme == .light ? .black : .white)
 
             // Docked Miniplayer above Tab Bar
             if coordinator.displayState == .miniplayer, let video = coordinator.currentVideo {
@@ -83,17 +96,17 @@ public struct MainTabView: View {
                     .zIndex(50)
             }
 
-            // Expanded / Fullscreen Watch Player (fills 100% of the screen)
+            // Expanded / Fullscreen Watch Player
             if (coordinator.displayState == .expanded || coordinator.displayState == .fullscreen),
                let video = coordinator.currentVideo {
                 VideoPlayerView(video: video)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .ignoresSafeArea(.all)
                     .transition(.opacity)
                     .zIndex(100)
             }
         }
         .background(YouTubeTheme.background)
+        .preferredColorScheme(themeManager.selectedTheme.colorScheme)
         .ignoresSafeArea(.keyboard)
     }
 }

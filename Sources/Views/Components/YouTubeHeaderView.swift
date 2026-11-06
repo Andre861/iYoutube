@@ -4,6 +4,8 @@ public struct YouTubeHeaderView: View {
     public let onSearchTap: (() -> Void)?
     public let onSettingsTap: (() -> Void)?
 
+    @ObservedObject private var themeManager = ThemeManager.shared
+
     public init(onSearchTap: (() -> Void)? = nil, onSettingsTap: (() -> Void)? = nil) {
         self.onSearchTap = onSearchTap
         self.onSettingsTap = onSettingsTap
@@ -33,17 +35,28 @@ public struct YouTubeHeaderView: View {
 
             // Header Quick Action Icons
             HStack(spacing: 16) {
+                // Quick Theme Toggle (Moon / Sun)
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        themeManager.toggleTheme()
+                    }
+                }) {
+                    Image(systemName: themeManager.selectedTheme == .light ? "moon.fill" : "sun.max.fill")
+                        .font(.system(size: 17))
+                        .foregroundColor(YouTubeTheme.textPrimary)
+                }
+
                 // Cast / AirPlay
                 Button(action: {}) {
                     Image(systemName: "airplayvideo")
-                        .font(.system(size: 18))
+                        .font(.system(size: 17))
                         .foregroundColor(YouTubeTheme.textPrimary)
                 }
 
                 // Notification Bell
                 Button(action: {}) {
                     Image(systemName: "bell")
-                        .font(.system(size: 18))
+                        .font(.system(size: 17))
                         .foregroundColor(YouTubeTheme.textPrimary)
                 }
 
@@ -51,7 +64,7 @@ public struct YouTubeHeaderView: View {
                 if let onSearch = onSearchTap {
                     Button(action: onSearch) {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 18))
+                            .font(.system(size: 17))
                             .foregroundColor(YouTubeTheme.textPrimary)
                     }
                 }
@@ -60,7 +73,7 @@ public struct YouTubeHeaderView: View {
                 if let onSettings = onSettingsTap {
                     Button(action: onSettings) {
                         Image(systemName: "gearshape.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 17))
                             .foregroundColor(YouTubeTheme.textPrimary)
                     }
                 }

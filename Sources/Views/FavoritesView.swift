@@ -153,7 +153,6 @@ public struct FavoritesView: View {
             .background(YouTubeTheme.background)
         }
         .background(YouTubeTheme.background)
-        .navigationBarHidden(true)
     }
 
     private func segmentButton(title: String, tag: Int) -> some View {

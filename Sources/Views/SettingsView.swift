@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct SettingsView: View {
     @ObservedObject private var service = InvidiousService.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var customURL: String = ""
 
     public init() {}
@@ -24,6 +25,22 @@ public struct SettingsView: View {
                 .background(YouTubeTheme.border)
 
             Form {
+                // Appearance / Theme Section
+                Section(header: Text("Appearance").foregroundColor(YouTubeTheme.textSecondary)) {
+                    Picker("Theme", selection: $themeManager.selectedTheme) {
+                        ForEach(AppTheme.allCases) { theme in
+                            Text(theme.rawValue).tag(theme)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+
+                    Text(themeManager.selectedTheme == .system
+                         ? "Follows iPad system appearance settings."
+                         : (themeManager.selectedTheme == .dark ? "Authentic YouTube Dark theme active." : "Authentic YouTube Light theme active."))
+                        .font(.caption)
+                        .foregroundColor(YouTubeTheme.textSecondary)
+                }
+
                 Section(header: Text("Invidious Server").foregroundColor(YouTubeTheme.textSecondary)) {
                     Picker("Active Node", selection: $service.currentInstance) {
                         ForEach(InvidiousInstance.defaultInstances) { inst in
@@ -106,13 +123,12 @@ public struct SettingsView: View {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.1.0 (YouTube Parity)")
+                        Text("1.1.0")
                             .foregroundColor(YouTubeTheme.textSecondary)
                     }
                 }
             }
         }
         .background(YouTubeTheme.background)
-        .navigationBarHidden(true)
     }
 }

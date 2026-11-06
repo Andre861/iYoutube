@@ -125,6 +125,5 @@ public struct SearchView: View {
             .background(YouTubeTheme.background)
         }
         .background(YouTubeTheme.background)
-        .navigationBarHidden(true)
     }
 }

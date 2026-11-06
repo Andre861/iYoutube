@@ -92,6 +92,5 @@ public struct HomeFeedView: View {
             }
         }
         .background(YouTubeTheme.background)
-        .navigationBarHidden(true)
     }
 }

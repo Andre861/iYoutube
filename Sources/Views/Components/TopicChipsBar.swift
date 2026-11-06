@@ -26,7 +26,7 @@ public struct TopicChipsBar: View {
                     }) {
                         Text(topic)
                             .font(.subheadline.weight(isSelected ? .bold : .medium))
-                            .foregroundColor(isSelected ? .black : YouTubeTheme.textPrimary)
+                            .foregroundColor(isSelected ? YouTubeTheme.textOnPillSelected : YouTubeTheme.textPrimary)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
                             .background(isSelected ? YouTubeTheme.pillSelected : YouTubeTheme.pill)
