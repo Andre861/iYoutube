@@ -1,6 +1,26 @@
 import SwiftUI
 import AVKit
 
+// Native AVPlayerViewController wrapper for full system controls & PiP
+public struct CustomPlayerController: UIViewControllerRepresentable {
+    public let player: AVPlayer
+
+    public func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.allowsPictureInPicturePlayback = true
+        controller.updatesNowPlayingInfoCenter = true
+        controller.showsPlaybackControls = true
+        return controller
+    }
+
+    public func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        if uiViewController.player != player {
+            uiViewController.player = player
+        }
+    }
+}
+
 public struct VideoPlayerView: View {
     public let video: Video
 
