@@ -8,14 +8,18 @@ on:
 jobs:
   build:
     name: Build & Package IPA for iOS 15
-    runs-on: macos-14
+    runs-on: macos-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_15.4.app || sudo xcode-select -switch /Applications/Xcode.app
+        run: |
+          if [ -d "/Applications/Xcode.app" ]; then
+            sudo xcode-select -switch /Applications/Xcode.app
+          fi
+          xcodebuild -version
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -50,3 +54,4 @@ jobs:
           name: iYoutube-iOS15-ipa
           path: iYoutube.ipa
           retention-days: 14
+
